@@ -8,69 +8,94 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-)
 
-const (
-	defaultPort               = "8080"
-	defaultStatsWindowSeconds = 60
+	"api-itau/config"
+	"api-itau/handlers"
+	"api-itau/internal/middleware"
+	"api-itau/internal/services"
+	"api-itau/pkg/logger"
 )
 
 func main() {
-
-	logger := log.New(os.Stdout, "[API] ", log.LstdFlags|log.Lshortfile)
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = defaultPort
+	// Carrega as configurações
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("Erro ao carregar configurações: %v", err)
 	}
 
+	// Inicializa o logger
+	log := logger.NewDefaultLogger()
+
+	// Cria os serviços
+	statsService := services.NewStatisticsService(cfg, log)
+	transactionService := services.NewTransactionService(statsService, log)
+
+	// Cria os handlers
+	statsHandler := handlers.NewStatisticsHandler(statsService, log)
+	transactionHandler := handlers.NewTransactionHandler(transactionService, log)
+
+	// Cria o router
 	mux := http.NewServeMux()
 
+	// Registra as rotas
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"healthy"}`))
 	})
 
-	mux.HandleFunc("POST /transacao", nil)
-	mux.HandleFunc("DELETE /transacao", nil)
-	mux.HandleFunc("GET /estatistica", nil)
+	mux.Handle("POST /transacao", transactionHandler)
+	mux.Handle("DELETE /transacao", transactionHandler)
+	mux.Handle("GET /estatistica", statsHandler)
 
+	// Aplica os middlewares
+	handler := middleware.RequestIDMiddleware(log)(
+		middleware.LoggingMiddleware(log)(
+			middleware.RecoveryMiddleware(log)(mux),
+		),
+	)
+
+	// Cria o servidor
 	server := &http.Server{
-		Addr:         ":" + port,
-		Handler:      mux,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  15 * time.Second,
+		Addr:         ":" + cfg.Server.Port,
+		Handler:      handler,
+		ReadTimeout:  cfg.Server.ReadTimeout,
+		WriteTimeout: cfg.Server.WriteTimeout,
+		IdleTimeout:  cfg.Server.IdleTimeout,
 	}
 
+	// Canal para erros do servidor
 	serverErrors := make(chan error, 1)
 
+	// Inicia o servidor em uma goroutine
 	go func() {
-		logger.Printf("Servidor está escutando na porta: %s...", port)
+		log.Info("servidor iniciado", "porta", cfg.Server.Port)
 		serverErrors <- server.ListenAndServe()
 	}()
 
+	// Canal para sinais de interrupção
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
 
+	// Aguarda sinal de shutdown ou erro
 	select {
 	case err := <-serverErrors:
-		logger.Fatalf("erro ao iniciar o servidor: %v", err)
+		log.Error("erro ao iniciar servidor", "erro", err)
 
 	case sig := <-shutdown:
-		logger.Printf("iniciando shutdown, sinal: %v", sig)
+		log.Info("iniciando shutdown", "sinal", sig)
 
+		// Contexto com timeout para shutdown gracioso
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
 		// Tenta desligar o servidor graciosamente
 		if err := server.Shutdown(ctx); err != nil {
-			logger.Printf("erro durante o shutdown do servidor: %v", err)
+			log.Error("erro durante shutdown do servidor", "erro", err)
 			if err := server.Close(); err != nil {
-				logger.Printf("erro ao forçar fechamento do servidor: %v", err)
+				log.Error("erro ao forçar fechamento do servidor", "erro", err)
 			}
 		}
 
-		logger.Println("servidor desligado com sucesso")
+		log.Info("servidor desligado com sucesso")
 	}
 }
