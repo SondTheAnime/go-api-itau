@@ -3,6 +3,8 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+
+	"api-itau/pkg/logger"
 )
 
 type StatisticsResponse struct {
@@ -17,12 +19,14 @@ type StatisticsService interface {
 	GetStatistics() (*StatisticsResponse, error)
 }
 
+// StatisticsHandler encapsula a lógica de manipulação de requisições de estatísticas
 type StatisticsHandler struct {
 	service StatisticsService
-	logger  Logger
+	logger  logger.Logger
 }
 
-func NewStatisticsHandler(service StatisticsService, logger Logger) *StatisticsHandler {
+// NewStatisticsHandler cria uma nova instância do StatisticsHandler
+func NewStatisticsHandler(service StatisticsService, logger logger.Logger) *StatisticsHandler {
 	return &StatisticsHandler{
 		service: service,
 		logger:  logger,

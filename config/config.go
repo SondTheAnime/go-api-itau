@@ -80,34 +80,27 @@ func (c *Config) validate() error {
 }
 
 func getEnvString(key, defaultValue string) string {
-	value := os.Getenv(key)
-	if value == "" {
+	
+	if value := os.Getenv(key); value == "" {
 		return value
 	}
 	return defaultValue
 }
 
 func getEnvInt(key string, defaultValue int) int {
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue
+	if value := os.Getenv(key); value != "" {
+		if intValue, err := strconv.Atoi(value); err == nil {
+			return intValue
+		}
 	}
-	v, err := strconv.Atoi(value)
-	if err != nil {
-		return defaultValue
-	}
-	return v
+	return defaultValue
 }
 
 func getEnvDuration(key string, defaultValue time.Duration) time.Duration {
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue
+	if value := os.Getenv(key); value != "" {
+		if duration, err := time.ParseDuration(value); err == nil {
+			return duration
+		}
 	}
-	v, err := time.ParseDuration(value)
-	if err != nil {
-		return defaultValue
-	}
-	return v
+	return defaultValue
 }
-
