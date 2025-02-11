@@ -48,13 +48,12 @@ func (s *StatisticsService) AddTransaction(t models.Transaction) {
 
 // GetStatistics retorna as estatísticas das transações dentro da janela de tempo
 func (s *StatisticsService) GetStatistics() (*handlers.StatisticsResponse, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	s.cleanOldTransactions()
 
-	validTransactions := s.getValidTransactions()
-	if len(validTransactions) == 0 {
+	if len(s.transactions) == 0 {
 		return &handlers.StatisticsResponse{
 			Count: 0,
 			Sum:   0,
@@ -64,7 +63,7 @@ func (s *StatisticsService) GetStatistics() (*handlers.StatisticsResponse, error
 		}, nil
 	}
 
-	stats := s.calculateStatistics(validTransactions)
+	stats := s.calculateStatistics(s.transactions)
 
 	s.logger.Info("estatísticas calculadas",
 		"count", stats.Count,

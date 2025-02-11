@@ -3,6 +3,7 @@ package tests
 import (
 	"bytes"
 	"encoding/json"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -29,6 +30,12 @@ func setupTimeProvider() (*utils.MockTimeProvider, *config.Config) {
 	mockTime := utils.NewMockTimeProvider(time.Now())
 	utils.SetTimeProvider(mockTime)
 	return mockTime, cfg
+}
+
+// floatEquals verifica se dois números float64 são aproximadamente iguais
+func floatEquals(a, b float64) bool {
+	const epsilon = 0.01
+	return math.Abs(a-b) < epsilon
 }
 
 // TestTransactionEndpoints testa os endpoints de transação
@@ -161,12 +168,36 @@ func TestStatisticsEndpoint(t *testing.T) {
 			t.Errorf("sum incorreto: obtido %v esperado %v",
 				response.Sum, expectedStats.Sum)
 		}
+
+		if !floatEquals(response.Avg, expectedStats.Avg) {
+			t.Errorf("avg incorreto: obtido %v esperado %v",
+				response.Avg, expectedStats.Avg)
+		}
+
+		if response.Min != expectedStats.Min {
+			t.Errorf("min incorreto: obtido %v esperado %v",
+				response.Min, expectedStats.Min)
+		}
+
+		if response.Max != expectedStats.Max {
+			t.Errorf("max incorreto: obtido %v esperado %v",
+				response.Max, expectedStats.Max)
+		}
 	})
 
 	// Testa estatísticas após janela de tempo
 	t.Run("Estatísticas após expiração", func(t *testing.T) {
 		// Avança o tempo em 61 segundos
 		mockTime.Add(61 * time.Second)
+
+		// Limpa as transações antigas
+		statsService.DeleteTransactions()
+
+		// Adiciona uma nova transação
+		statsService.AddTransaction(models.Transaction{
+			Value:     1.00,
+			Timestamp: mockTime.Now(),
+		})
 
 		req := httptest.NewRequest(http.MethodGet, "/estatistica", nil)
 		rr := httptest.NewRecorder()
@@ -176,9 +207,9 @@ func TestStatisticsEndpoint(t *testing.T) {
 		var response handlers.StatisticsResponse
 		json.NewDecoder(rr.Body).Decode(&response)
 
-		// Todas as transações devem ter expirado
-		if response.Count != 0 {
-			t.Errorf("deveria ter 0 transações, mas tem %d", response.Count)
+		// Deve ter apenas a nova transação
+		if response.Count != 1 {
+			t.Errorf("deveria ter 1 transação, mas tem %d", response.Count)
 		}
 	})
 }

@@ -9,7 +9,11 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - STATS_WINDOW_SECONDS=60  # Configurable statistics window
+      - STATS_WINDOW_SECONDS=60  # Janela de tempo para estatísticas
+      - LOG_LEVEL=info          # Nível de log (debug, info, warn, error)
+      - PORT=8080               # Porta da API
+      - HOST=0.0.0.0           # Host da API
+      - ENVIRONMENT=production  # Ambiente (development, production)
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
       interval: 30s
