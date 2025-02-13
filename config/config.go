@@ -3,13 +3,13 @@ package config
 import (
 	"fmt"
 	"os"
-	"time"
 	"strconv"
+	"time"
 )
 
 type Config struct {
-	Server ServerConfig
-	Stats StatsConfig
+	Server   ServerConfig
+	Stats    StatsConfig
 	LogLevel string
 }
 
@@ -25,12 +25,12 @@ type StatsConfig struct {
 }
 
 const (
-	defaultPort         = "8080"
+	defaultPort               = "8080"
 	defaultStatsWindowSeconds = 60
-	defaultReadTimeout  = 5 * time.Second
-	defaultWriteTimeout = 10 * time.Second
-	defaultIdleTimeout  = 15 * time.Second
-	defaultLogLevel = "info"
+	defaultReadTimeout        = 5 * time.Second
+	defaultWriteTimeout       = 10 * time.Second
+	defaultIdleTimeout        = 15 * time.Second
+	defaultLogLevel           = "info"
 )
 
 func Load() (*Config, error) {
@@ -80,8 +80,7 @@ func (c *Config) validate() error {
 }
 
 func getEnvString(key, defaultValue string) string {
-	
-	if value := os.Getenv(key); value == "" {
+	if value := os.Getenv(key); value != "" {
 		return value
 	}
 	return defaultValue

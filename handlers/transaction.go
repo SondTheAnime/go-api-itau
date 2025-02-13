@@ -91,7 +91,7 @@ func (h *TransactionHandler) handlePost(w http.ResponseWriter, r *http.Request) 
 }
 
 // handleDelete processa requisições DELETE para remover todas as transações
-func (h *TransactionHandler) handleDelete(w http.ResponseWriter, r *http.Request) {
+func (h *TransactionHandler) handleDelete(w http.ResponseWriter, _ *http.Request) {
 	if err := h.service.DeleteTransactions(); err != nil {
 		h.logger.Error("erro ao deletar transações", "erro", err)
 		http.Error(w, "Erro ao deletar transações", http.StatusInternalServerError)

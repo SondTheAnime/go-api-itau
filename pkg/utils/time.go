@@ -87,7 +87,7 @@ func NewTimeWindow(start, end time.Time) TimeWindow {
 
 // Contains verifica se um timestamp está dentro da janela de tempo
 func (w TimeWindow) Contains(t time.Time) bool {
-	return (t.Equal(w.Start) || t.After(w.Start)) && t.Before(w.End)
+	return (t.Equal(w.Start) || t.After(w.Start)) && (t.Equal(w.End) || t.Before(w.End))
 }
 
 // Duration retorna a duração da janela de tempo

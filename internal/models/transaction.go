@@ -7,7 +7,7 @@ import (
 
 type Transaction struct {
 	Value     float64   `json:"valor"`
-	Timestamp time.Time `json:"dataHora"`
+	Timestamp time.Time `json:"dataHora,omitempty"`
 }
 
 func (t *Transaction) Validate() error {
@@ -15,8 +15,13 @@ func (t *Transaction) Validate() error {
 		return fmt.Errorf("Valor não pode ser negativo")
 	}
 
+	// Se o timestamp estiver zerado, usa o tempo atual
+	if t.Timestamp.IsZero() {
+		t.Timestamp = time.Now()
+	}
+
 	if t.Timestamp.After(time.Now()) {
-		return	fmt.Errorf("data da transação não pode estar no futuro")
+		return fmt.Errorf("data da transação não pode estar no futuro")
 	}
 
 	return nil

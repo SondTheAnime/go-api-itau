@@ -188,16 +188,18 @@ func TestStatisticsEndpoint(t *testing.T) {
 	// Testa estatísticas após janela de tempo
 	t.Run("Estatísticas após expiração", func(t *testing.T) {
 		// Avança o tempo em 61 segundos
-		mockTime.Add(61 * time.Second)
+		novoTempo := mockTime.Now().Add(61 * time.Second)
+		mockTime.Set(novoTempo)
 
 		// Limpa as transações antigas
 		statsService.DeleteTransactions()
 
-		// Adiciona uma nova transação
-		statsService.AddTransaction(models.Transaction{
+		// Adiciona uma nova transação com o tempo atual
+		novaTransacao := models.Transaction{
 			Value:     1.00,
 			Timestamp: mockTime.Now(),
-		})
+		}
+		statsService.AddTransaction(novaTransacao)
 
 		req := httptest.NewRequest(http.MethodGet, "/estatistica", nil)
 		rr := httptest.NewRecorder()
@@ -210,6 +212,11 @@ func TestStatisticsEndpoint(t *testing.T) {
 		// Deve ter apenas a nova transação
 		if response.Count != 1 {
 			t.Errorf("deveria ter 1 transação, mas tem %d", response.Count)
+		}
+
+		// Verifica se os valores estão corretos
+		if response.Sum != 1.00 {
+			t.Errorf("soma incorreta: obtido %v esperado %v", response.Sum, 1.00)
 		}
 	})
 }

@@ -1,0 +1,116 @@
+openapi: 3.0.0
+info:
+  title: API de Transações
+  version: 1.0.0
+  description: API para gerenciamento de transações financeiras
+
+servers:
+  - url: http://localhost:8000
+    description: Servidor local de desenvolvimento
+
+paths:
+  /transacao:
+    post:
+      summary: Registra uma nova transação
+      tags:
+        - Transações
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                valor:
+                  type: number
+                  format: double
+                  description: Valor da transação
+                  example: 100.50
+                dataHora:
+                  type: string
+                  format: date-time
+                  description: "Data e hora da transação. Se não informado, será utilizado o momento atual do servidor"
+                  example: "2025-02-13T08:59:02Z"
+                tipo:
+                  type: string
+                  description: Tipo da transação (débito ou crédito)
+                  example: "débito"
+                descricao:
+                  type: string
+                  description: Descrição da transação
+                  example: "Compra no supermercado"
+              required:
+                - valor
+                - tipo
+                - descricao
+      responses:
+        '201':
+          description: Transação criada com sucesso
+        '400':
+          description: Dados inválidos
+        '422':
+          description: Erro de validação
+        '500':
+          description: Erro interno do servidor
+    
+    delete:
+      summary: Remove todas as transações
+      tags:
+        - Transações
+      responses:
+        '200':
+          description: Transações removidas com sucesso
+        '500':
+          description: Erro interno do servidor
+
+  /estatistica:
+    get:
+      summary: Retorna estatísticas das transações
+      tags:
+        - Estatísticas
+      responses:
+        '200':
+          description: Estatísticas calculadas com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: Quantidade de transações
+                  sum:
+                    type: number
+                    format: double
+                    description: Soma dos valores das transações
+                  avg:
+                    type: number
+                    format: double
+                    description: Média dos valores das transações
+                  min:
+                    type: number
+                    format: double
+                    description: Menor valor entre as transações
+                  max:
+                    type: number
+                    format: double
+                    description: Maior valor entre as transações
+        '500':
+          description: Erro interno do servidor
+
+  /health:
+    get:
+      summary: Verifica a saúde da API
+      tags:
+        - Sistema
+      responses:
+        '200':
+          description: API está saudável
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy" 

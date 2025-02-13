@@ -14,6 +14,8 @@ import (
 	"api-itau/internal/middleware"
 	"api-itau/internal/services"
 	"api-itau/pkg/logger"
+
+	scalar "github.com/MarceloPetrucio/go-scalar-api-reference"
 )
 
 func main() {
@@ -46,6 +48,24 @@ func main() {
 	mux.Handle("POST /transacao", transactionHandler)
 	mux.Handle("DELETE /transacao", transactionHandler)
 	mux.Handle("GET /estatistica", statsHandler)
+
+	// Adiciona a rota para a documentação
+	mux.HandleFunc("GET /docs", func(w http.ResponseWriter, r *http.Request) {
+		htmlContent, err := scalar.ApiReferenceHTML(&scalar.Options{
+			SpecURL: "./docs/scalar/scalar.yaml",
+			CustomOptions: scalar.CustomOptions{
+				PageTitle: "API de Transações - Documentação",
+			},
+			DarkMode: true,
+		})
+		if err != nil {
+			log.Error("erro ao gerar documentação", "erro", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(htmlContent))
+	})
 
 	// Aplica os middlewares
 	handler := middleware.RequestIDMiddleware(log)(

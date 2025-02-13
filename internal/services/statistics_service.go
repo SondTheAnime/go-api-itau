@@ -23,7 +23,7 @@ type StatisticsService struct {
 // NewStatisticsService cria uma nova instância do StatisticsService
 func NewStatisticsService(cfg *config.Config, log logger.Logger) *StatisticsService {
 	duration := time.Duration(cfg.Stats.WindowSeconds) * time.Second
-	window := utils.NewSlidingWindow(duration, &utils.RealTimeProvider{})
+	window := utils.NewSlidingWindow(duration, utils.GetTimeProvider())
 
 	return &StatisticsService{
 		transactions: make([]models.Transaction, 0),
@@ -101,17 +101,6 @@ func (s *StatisticsService) cleanOldTransactions() {
 	}
 
 	s.transactions = validTransactions
-}
-
-// getValidTransactions retorna apenas as transações dentro da janela
-func (s *StatisticsService) getValidTransactions() []models.Transaction {
-	validTransactions := make([]models.Transaction, 0)
-	for _, t := range s.transactions {
-		if s.window.IsInWindow(t.Timestamp) {
-			validTransactions = append(validTransactions, t)
-		}
-	}
-	return validTransactions
 }
 
 // calculateStatistics calcula as estatísticas para um conjunto de transações
