@@ -1,12 +1,12 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"api-itau/pkg/logger"
 )
 
+// StatisticsResponse representa a resposta com as estatísticas das transações
 type StatisticsResponse struct {
 	Count int     `json:"count"`
 	Sum   float64 `json:"sum"`
@@ -38,17 +38,18 @@ func (h *StatisticsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Verifica se o método é GET
 	if r.Method != http.MethodGet {
 		h.logger.Error("método não permitido", "método", r.Method)
-		http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+		RespondWithError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Método não permitido")
 		return
 	}
 
 	stats, err := h.service.GetStatistics()
 	if err != nil {
 		h.logger.Error("erro ao obter estatísticas", "erro", err)
-		http.Error(w, "Erro interno do servidor", http.StatusInternalServerError)
+		RespondWithError(w, http.StatusInternalServerError, "internal_error", "Erro interno do servidor")
 		return
 	}
 
+	// Garante que temos um objeto de estatísticas válido
 	if stats == nil {
 		stats = &StatisticsResponse{
 			Count: 0,
@@ -59,14 +60,6 @@ func (h *StatisticsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-
-	if err := json.NewEncoder(w).Encode(stats); err != nil {
-		h.logger.Error("erro ao codificar resposta", "erro", err)
-		http.Error(w, "Erro ao processar resposta", http.StatusInternalServerError)
-		return
-	}
-
 	h.logger.Info("estatísticas retornadas com sucesso",
 		"count", stats.Count,
 		"sum", stats.Sum,
@@ -74,6 +67,15 @@ func (h *StatisticsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		"min", stats.Min,
 		"max", stats.Max,
 	)
+
+	// Cria uma resposta formatada
+	response := APIResponse{
+		Success: true,
+		Data:    stats,
+	}
+
+	// Envia a resposta
+	RespondWithJSON(w, http.StatusOK, response)
 }
 
 type Logger interface {

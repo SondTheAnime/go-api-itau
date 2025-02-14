@@ -16,6 +16,12 @@ type TransactionRequest struct {
 	Timestamp time.Time `json:"dataHora"`
 }
 
+// TransactionResponse representa a resposta de uma transação bem-sucedida
+type TransactionResponse struct {
+	Value     float64   `json:"valor"`
+	Timestamp time.Time `json:"dataHora"`
+}
+
 // TransactionService define o contrato para o serviço de transações
 type TransactionService interface {
 	AddTransaction(models.Transaction) error
@@ -45,7 +51,7 @@ func (h *TransactionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.handleDelete(w, r)
 	default:
 		h.logger.Error("método não permitido", "método", r.Method)
-		http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+		RespondWithError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Método não permitido")
 	}
 }
 
@@ -55,7 +61,7 @@ func (h *TransactionHandler) handlePost(w http.ResponseWriter, r *http.Request) 
 	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20)) // 1 MB
 	if err != nil {
 		h.logger.Error("erro ao ler corpo da requisição", "erro", err)
-		http.Error(w, "Erro ao ler requisição", http.StatusBadRequest)
+		RespondWithError(w, http.StatusBadRequest, "invalid_request", "Erro ao ler requisição")
 		return
 	}
 	defer r.Body.Close()
@@ -63,7 +69,7 @@ func (h *TransactionHandler) handlePost(w http.ResponseWriter, r *http.Request) 
 	var req TransactionRequest
 	if err := json.Unmarshal(body, &req); err != nil {
 		h.logger.Error("erro ao decodificar JSON", "erro", err)
-		http.Error(w, "JSON inválido", http.StatusBadRequest)
+		RespondWithError(w, http.StatusBadRequest, "invalid_json", "JSON inválido")
 		return
 	}
 
@@ -71,14 +77,14 @@ func (h *TransactionHandler) handlePost(w http.ResponseWriter, r *http.Request) 
 	transaction, err := models.NewTransaction(req.Value, req.Timestamp)
 	if err != nil {
 		h.logger.Error("transação inválida", "erro", err)
-		http.Error(w, "Transação inválida", http.StatusUnprocessableEntity)
+		RespondWithError(w, http.StatusUnprocessableEntity, "invalid_transaction", "Transação inválida")
 		return
 	}
 
 	// Adiciona a transação através do serviço
 	if err := h.service.AddTransaction(*transaction); err != nil {
 		h.logger.Error("erro ao adicionar transação", "erro", err)
-		http.Error(w, "Erro ao processar transação", http.StatusInternalServerError)
+		RespondWithError(w, http.StatusInternalServerError, "internal_error", "Erro ao processar transação")
 		return
 	}
 
@@ -87,17 +93,24 @@ func (h *TransactionHandler) handlePost(w http.ResponseWriter, r *http.Request) 
 		"dataHora", transaction.Timestamp,
 	)
 
-	w.WriteHeader(http.StatusCreated)
+	response := TransactionResponse{
+		Value:     transaction.Value,
+		Timestamp: transaction.Timestamp,
+	}
+
+	RespondWithSuccess(w, http.StatusCreated, response)
 }
 
 // handleDelete processa requisições DELETE para remover todas as transações
 func (h *TransactionHandler) handleDelete(w http.ResponseWriter, _ *http.Request) {
 	if err := h.service.DeleteTransactions(); err != nil {
 		h.logger.Error("erro ao deletar transações", "erro", err)
-		http.Error(w, "Erro ao deletar transações", http.StatusInternalServerError)
+		RespondWithError(w, http.StatusInternalServerError, "internal_error", "Erro ao deletar transações")
 		return
 	}
 
 	h.logger.Info("todas as transações foram deletadas")
-	w.WriteHeader(http.StatusOK)
+	RespondWithSuccess(w, http.StatusOK, map[string]string{
+		"message": "Todas as transações foram deletadas com sucesso",
+	})
 }
